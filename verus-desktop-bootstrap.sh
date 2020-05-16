@@ -2,7 +2,8 @@
 
 set -eu
 
-VERUS_DESKTOP_VERSION=0.6.4-beta-1
+VERUS_DESKTOP_VERSION=$(curl -s https://api.github.com/repos/veruscoin/Verus-Desktop/releases/latest | grep "tag_name" | awk '{print substr($2, 2, length($2)-3)}')
+
 if [[ -z "${VRSC_DATA_DIR-}" ]]; then
   if [[ "$OSTYPE" == "darwin"* ]]; then
     VRSC_DATA_DIR="$HOME/Library/Application Support/Komodo/VRSC"
@@ -12,14 +13,19 @@ if [[ -z "${VRSC_DATA_DIR-}" ]]; then
 fi
 if [[ "$OSTYPE" == "darwin"* ]]; then
   PARAMS_DIR="$HOME/Library/Application Support/ZcashParams"
-  PACKAGE=Verus-Desktop-MacOS-v${VERUS_DESKTOP_VERSION}
+  PACKAGE=Verus-Desktop-MacOS-${VERUS_DESKTOP_VERSION}.tgz
+  DMG=Verus-Desktop-${VERUS_DESKTOP_VERSION}.dmg
+  DMG_SIG=${DMG}.signature.txt
 else
   PARAMS_DIR="$HOME/.zcash-params"
   if [ "$(uname -m)" == "aarch64" ]; then
-    PACKAGE="Verus-Desktop-Linux-v${VERUS_DESKTOP_VERSION}-arm64"
+    PACKAGE="Verus-Desktop-Linux-${VERUS_DESKTOP_VERSION}-arm64.tgz"
+    APPIMAGE=Verus-Desktop-${VERUS_DESKTOP_VERSION}-arm64.AppImage
   else
-    PACKAGE="Verus-Desktop-Linux-v${VERUS_DESKTOP_VERSION}-x86_64"
+    PACKAGE="Verus-Desktop-Linux-${VERUS_DESKTOP_VERSION}-x86_64.tgz"
+    APPIMAGE=Verus-Desktop-${VERUS_DESKTOP_VERSION}-x86_64.AppImage
   fi
+    APPIMAGE_SIG=${APPIMAGE}.signature.txt
 fi
 
 SPROUT_PKEY_NAME='sprout-proving.key'
@@ -31,7 +37,7 @@ SPROUT_URL="https://download.z.cash/downloads"
 SPROUT_IPFS="/ipfs/QmZKKx7Xup7LiAtFRhYsE1M7waXcv9ir9eCECyXAFGxhEo"
 
 BOOTSTRAP_URL="https://bootstrap.veruscoin.io"
-VERUS_DESKTOP_URL="https://github.com/VerusCoin/Verus-Desktop/releases/download/v${VERUS_DESKTOP_VERSION}"
+VERUS_DESKTOP_URL="https://github.com/VerusCoin/Verus-Desktop/releases/download/${VERUS_DESKTOP_VERSION}"
 
 SHA256CMD="$(command -v sha256sum || echo shasum)"
 SHA256ARGS="$(command -v sha256sum >/dev/null || echo '-a 256')"
@@ -226,7 +232,7 @@ function fetch_params() {
 
     cat "${dlname}.part.1" "${dlname}.part.2" >"${dlname}"
     rm "${dlname}.part.1" "${dlname}.part.2"
-    if verify_checksum "${filename}.part.${i}" "$expectedhash" "$dlname"; then
+    if verify_checksum "${filename}.part.${i}" "$dlname" "$expectedhash"; then
       mv -v "$dlname" "$output"
     else
       echo "Failed to verify parameter checksums!" >&2
@@ -296,17 +302,17 @@ function fetch_bootstrap() {
 
 function install_mac() {
   if ! [ -d "/Applications/Verus-Desktop.app" ]; then
-    echo fetching ${PACKAGE}.tgz
+    echo "Fetching ${PACKAGE}"
     for method in wget curl failure; do
-      if "fetch_$method" "${PACKAGE}.tgz" "/tmp/${PACKAGE}.tgz" "${VERUS_DESKTOP_URL}"; then
+      if "fetch_$method" "${PACKAGE}" "/tmp/${PACKAGE}" "${VERUS_DESKTOP_URL}"; then
         echo "Verus Desktop download successful!"
         break
       fi
     done
-    tar -xzvf "/tmp/${PACKAGE}.tgz" --directory "/tmp"
-    expectedhash="$(awk -F'[, \t]*' '/hash/{print substr($3,2,length($3)-2)}' /tmp/${PACKAGE}.dmg.signature.txt)"
+    tar -xzvf "/tmp/${PACKAGE}" --directory "/tmp"
+    expectedhash="$(awk -F'[, \t]*' '/hash/{print substr($3,2,length($3)-2)}' /tmp/${DMG_SIG})"
 
-    if verify_checksum "${PACKAGE}.dmg" "/tmp/${PACKAGE}.dmg" "$expectedhash"; then
+    if verify_checksum "${DMG}" "/tmp/${DMG}" "$expectedhash"; then
       echo Installing Verus-Desktop
       #Mount dmg
       tempd=$(mktemp -d)
@@ -320,12 +326,14 @@ function install_mac() {
       echo "Installed Verus-Desktop in ${HOME}/Applications/"
     else
       echo "Failed to verify Verus Desktop checksum!" >&2
-      rm /tmp/${PACKAGE}.dm*
+      rm /tmp/${PACKAGE}
+      rm /tmp/${DMG}
+      rm /tmp/${DMG_SIG}
       exit 1
     fi
-    rm "/tmp/${PACKAGE}.tgz"
-    rm "/tmp/${PACKAGE}.dmg"
-    rm "/tmp/${PACKAGE}.dmg.signature.txt"
+    rm "/tmp/${PACKAGE}"
+    rm "/tmp/${DMG}"
+    rm "/tmp/${DMG_SIG}"
 
   else
     cat >&2 <<EOF
@@ -340,21 +348,21 @@ EOF
 function install_linux() {
   if [ ! -f "${HOME}/Desktop/${PACKAGE}.AppImage" ]; then
     for method in wget curl failure; do
-      if "fetch_$method" "${PACKAGE}.tgz" "/tmp/${PACKAGE}.tgz" "${VERUS_DESKTOP_URL}"; then
+      if "fetch_$method" "${PACKAGE}" "/tmp/${PACKAGE}" "${VERUS_DESKTOP_URL}"; then
         echo "Verus Desktop download successful!"
         break
       fi
     done
-    tar -xzvf "/tmp/${PACKAGE}.tgz" --directory /tmp
-    expectedhash="$(awk -F'[, \t]*' '/hash/{print substr($3,2,length($3)-2)}' /tmp/${PACKAGE}.AppImage.signature.txt)"
-    if verify_checksum "${PACKAGE}.AppImage" "/tmp/${PACKAGE}.AppImage" "$expectedhash"; then
-      mv /tmp/${PACKAGE}.AppImage ${HOME}/Desktop/
-      chmod +x "${HOME}/Desktop/${PACKAGE}.AppImage"
-      echo "${PACKAGE}.AppImage ready to launch in ${HOME}/Desktop"
-      rm "/tmp/${PACKAGE}.tgz"
+    tar -xzvf "/tmp/${PACKAGE}" --directory /tmp
+    expectedhash="$(awk -F'[, \t]*' '/hash/{print substr($3,2,length($3)-2)}' /tmp/${APPIMAGE_SIG})"
+    if verify_checksum "${APPIMAGE}" "/tmp/${APPIMAGE}" "$expectedhash"; then
+      mv /tmp/${APPIMAGE} ${HOME}/Desktop/
+      chmod +x "${HOME}/Desktop/${APPIMAGE}"
+      echo "${APPIMAGE} ready to launch in ${HOME}/Desktop"
+      rm "/tmp/${PACKAGE}"
     else
       echo failed!
-      rm "/tmp/${PACKAGE}.AppImage"
+      rm "/tmp/${APPIMAGE}"
     fi
   else
     echo "${PACKAGE}.AppImage is already in ${HOME}/Desktop"
@@ -407,6 +415,7 @@ EOF
   else
     install_linux
   fi
+
   echo Setup complete
 }
 main
