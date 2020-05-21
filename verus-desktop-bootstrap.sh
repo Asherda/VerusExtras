@@ -316,7 +316,7 @@ function install_mac() {
       echo Installing Verus-Desktop
       #Mount dmg
       tempd=$(mktemp -d)
-      listing=$(hdiutil attach "/tmp/${PACKAGE}.dmg" | grep Volumes)
+      listing=$(hdiutil attach "/tmp/${DMG}" | grep Volumes)
       volume=$(echo "$listing" | cut -f 3)
       cp -rf "$volume"/*.app /Applications
       img="hdiutil detach $(echo "$listing" | cut -f 1)"
@@ -331,6 +331,7 @@ function install_mac() {
       rm /tmp/${DMG_SIG}
       exit 1
     fi
+    
     rm "/tmp/${PACKAGE}"
     rm "/tmp/${DMG}"
     rm "/tmp/${DMG_SIG}"
