@@ -14,7 +14,7 @@ if [[ -z "${V_CHAIN_DATA_DIR-}" ]]; then
   fi
 fi
 
-BOOTSTRAP_URL="https://bootstrap.eruscoin.io"
+BOOTSTRAP_URL="https://bootstrap.veruscoin.io"
 BOOTSTRAP_ARCHIVE="$V_CHAIN-bootstrap.tar.gz"
 BOOTSTRAP_ARCHIVE_SIG="$BOOTSTRAP_ARCHIVE.verusid"
 SHA256CMD="$(command -v sha256sum || echo shasum)"
@@ -227,7 +227,7 @@ function main() {
 This script will install a blockchain data bootstrap
 
 EOF
- data_files=("fee_estimates.dat" "komodostate" "komodostate.ind" "peers.dat" "db.log" "debug.log" "signedmasks")
+  data_files=("fee_estimates.dat" "komodostate" "komodostate.ind" "peers.dat" "db.log" "debug.log" "signedmasks")
   data_dirs=("blocks" "chainstate" "database" "notarisations")
   vrsc_data=()
   if ! [ -d "${V_CHAIN_DATA_DIR}" ]; then
@@ -268,7 +268,7 @@ EOF
             done
             fetch_bootstrap
           else
-            echo Verusd is running
+            echo Verusd is running, close and try again.
           fi
           break
           fi
