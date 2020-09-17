@@ -142,14 +142,12 @@ GOTO :EOF
 	        ECHO "!filehash!"
             ECHO Failed to verify bootstrap checksum
         )
-        FOR %%F IN (fee_estimates.dat, komodostate, komodostate.ind, peers.dat, db.log, debug.log, signedmasks) DO (
-            IF  EXIST "!VRSC_DATA_DIR!\%%F" (
-                ECHO Found "!VRSC_DATA_DIR!\%%F"
-                SET USE_BOOTSTRAP=0
+        FOR %%F IN (!BOOTSTRAP_PACKAGE!, !BOOTSTRAP_PACKAGE_SIG!) DO (
+            IF  EXIST "!Temp!\%%F" (
+                DEL "!Temp!\%%F"
         )
     )
-       DEL "!Temp!\!BOOTSTRAP_PACKAGE!"
-       DEL "!Temp!\!BOOTSTRAP_PACKAGE_SIG!"
+
 GOTO :EOF
 
 ENDLOCAL
